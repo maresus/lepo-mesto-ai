@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lepo Mesto – Admin Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --blue: #1a4a7a;
+      --blue-mid: #2563a8;
+      --blue-light: #dbeafe;
+      --accent: #f59e0b;
+      --green: #16a34a;
+      --bg: #f4f7fb;
+      --card: #fff;
+      --border: #c8d8ea;
+      --muted: #5a7090;
+      --shadow: 0 4px 16px rgba(26,74,122,0.08);
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: #1a2840; padding-bottom: 40px; }
+    .page { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+    header { background: var(--blue); border-radius: var(--radius); padding: 18px 24px; margin-bottom: 20px; display: flex; align-items: center; gap: 16px; border-bottom: 3px solid var(--accent); }
+    header h1 { color: #fff; font-size: 1.3rem; }
+    header p  { color: rgba(255,255,255,0.65); font-size: 0.85rem; }
+    .header-right { margin-left: auto; }
+
+    .token-bar { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; margin-bottom: 18px; display: flex; gap: 10px; align-items: center; }
+    .token-bar input { flex: 1; border: 1.5px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 0.9rem; outline: none; }
+    .token-bar input:focus { border-color: var(--blue-mid); }
+    .btn { background: var(--blue); color: #fff; border: none; border-radius: 8px; padding: 9px 16px; font-weight: 600; font-size: 0.88rem; cursor: pointer; transition: background .15s; }
+    .btn:hover { background: var(--blue-mid); }
+    .btn.secondary { background: var(--bg); color: var(--blue); border: 1px solid var(--border); }
+
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .stat { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+    .stat-val { font-size: 2rem; font-weight: 700; color: var(--blue); }
+    .stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 18px; }
+    .card-header { padding: 14px 18px; background: var(--blue-light); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .card-header h2 { font-size: 1rem; color: var(--blue); }
+    .card-body { padding: 0; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th { background: #f0f6ff; padding: 10px 14px; text-align: left; font-weight: 600; color: var(--blue); border-bottom: 1px solid var(--border); }
+    td { padding: 10px 14px; border-bottom: 1px solid #f0f4f8; vertical-align: top; }
+    tr:hover { background: #f8faff; }
+    tr:last-child td { border-bottom: none; }
+
+    .session-row { cursor: pointer; }
+    .session-row:hover { background: #e8f0fa; }
+
+    .detail-panel { background: #f8faff; border-top: 2px solid var(--blue-light); padding: 16px 18px; display: none; }
+    .detail-panel.open { display: block; }
+    .msg-list { display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto; }
+    .msg-item { padding: 8px 12px; border-radius: 8px; font-size: 0.84rem; line-height: 1.5; }
+    .msg-item.user { background: var(--blue); color: #fff; align-self: flex-end; max-width: 80%; }
+    .msg-item.assistant { background: #e8f0fa; color: var(--text); align-self: flex-start; max-width: 80%; border: 1px solid var(--border); }
+    .msg-ts { font-size: 0.7rem; opacity: .65; margin-top: 3px; }
+
+    .empty { padding: 30px; text-align: center; color: var(--muted); }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+    .badge-blue { background: var(--blue-light); color: var(--blue); }
+  </style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <span style="font-size:2rem">🏛️</span>
+    <div>
+      <h1>Lepo Mesto – Admin Panel</h1>
+      <p>Pregled pogovorov virtualne asistentke Leja</p>
+    </div>
+  </header>
+
+  <div class="token-bar">
+    <span style="font-size:.85rem;color:var(--muted);font-weight:600">Admin žeton:</span>
+    <input type="password" id="tokenInput" placeholder="Vnesite ADMIN_TOKEN..." />
+    <button class="btn" onclick="loadAll()">Naloži</button>
+    <button class="btn secondary" onclick="refresh()">🔄 Osveži</button>
+  </div>
+
+  <div class="stats" id="stats">
+    <div class="stat"><div class="stat-val" id="sTot">—</div><div class="stat-label">Skupaj sej</div></div>
+    <div class="stat"><div class="stat-val" id="sToday">—</div><div class="stat-label">Danes</div></div>
+    <div class="stat"><div class="stat-val" id="sMsgs">—</div><div class="stat-label">Skupaj vprašanj</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>💬 Pogovori</h2>
+      <span class="badge badge-blue" id="sessionCount">0 sej</span>
+    </div>
+    <div class="card-body">
+      <table>
+        <thead><tr><th>Session ID</th><th>Začetek</th><th>Zadnje sporočilo</th><th>Sporočil</th></tr></thead>
+        <tbody id="sessionsBody"><tr><td colspan="4" class="empty">Najprej vnesite admin žeton in kliknite Naloži.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  let token = '';
+
+  function getToken() {
+    return document.getElementById('tokenInput').value.trim();
+  }
+
+  async function loadAll() {
+    token = getToken();
+    await loadStats();
+    await loadSessions();
+  }
+
+  function refresh() { loadAll(); }
+
+  async function loadStats() {
+    try {
+      const r = await fetch('/api/admin/stats?token=' + encodeURIComponent(token));
+      if (!r.ok) { alert('Napačen žeton.'); return; }
+      const d = await r.json();
+      document.getElementById('sTot').textContent    = d.total_sessions ?? '—';
+      document.getElementById('sToday').textContent  = d.today_sessions ?? '—';
+      document.getElementById('sMsgs').textContent   = d.total_messages ?? '—';
+    } catch(e) { console.error(e); }
+  }
+
+  async function loadSessions() {
+    try {
+      const r = await fetch('/api/admin/sessions?token=' + encodeURIComponent(token));
+      if (!r.ok) return;
+      const sessions = await r.json();
+      const tbody = document.getElementById('sessionsBody');
+      document.getElementById('sessionCount').textContent = sessions.length + ' sej';
+
+      if (!sessions.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="empty">Ni pogovorov.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = '';
+      sessions.forEach(s => {
+        const tr = document.createElement('tr');
+        tr.className = 'session-row';
+        tr.innerHTML = `
+          <td><code style="font-size:.8rem">${s.session_id}</code></td>
+          <td>${s.started?.replace('T',' ') || '—'}</td>
+          <td>${s.last_msg?.replace('T',' ') || '—'}</td>
+          <td><span class="badge badge-blue">${s.msg_count}</span></td>`;
+        tr.addEventListener('click', () => toggleDetail(s.session_id, tr));
+        tbody.appendChild(tr);
+      });
+    } catch(e) { console.error(e); }
+  }
+
+  let activeRow = null;
+  let detailPanel = null;
+
+  async function toggleDetail(sessionId, tr) {
+    // Close existing
+    if (detailPanel) { detailPanel.remove(); detailPanel = null; }
+    if (activeRow === tr) { activeRow = null; return; }
+    activeRow = tr;
+
+    const r = await fetch(`/api/admin/sessions/${encodeURIComponent(sessionId)}?token=${encodeURIComponent(token)}`);
+    if (!r.ok) return;
+    const msgs = await r.json();
+
+    const panel = document.createElement('tr');
+    panel.innerHTML = `<td colspan="4" class="detail-panel open">
+      <div style="font-weight:600;color:var(--blue);margin-bottom:10px">Pogovor: ${sessionId}</div>
+      <div class="msg-list" id="msgList_${sessionId}"></div>
+    </td>`;
+    tr.insertAdjacentElement('afterend', panel);
+    detailPanel = panel;
+
+    const list = panel.querySelector('.msg-list');
+    msgs.forEach(m => {
+      const d = document.createElement('div');
+      d.className = 'msg-item ' + m.role;
+      d.innerHTML = `<div>${m.content}</div><div class="msg-ts">${m.ts || ''}</div>`;
+      list.appendChild(d);
+    });
+    list.scrollTop = list.scrollHeight;
+  }
+</script>
+</body>
+</html>

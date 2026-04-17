@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Lepo Mesto – Občinski AI asistent</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --blue:       #1a4a7a;
+      --blue-mid:   #2563a8;
+      --blue-light: #4a90d9;
+      --green:      #2d7d4e;
+      --bg:         #f4f7fb;
+      --bg-dark:    #e8eef6;
+      --border:     #c8d8ea;
+      --text:       #1a2840;
+      --text-muted: #5a7090;
+      --bot-bg:     #e8f0fa;
+      --user-bg:    #1a4a7a;
+      --accent:     #f59e0b;
+    }
+    html, body { height: 100%; overflow: hidden; background: var(--bg); font-family: 'Inter', system-ui, sans-serif; }
+    .chat-wrap { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+    /* HEADER */
+    .header { background: var(--blue); padding: 14px 18px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; border-bottom: 3px solid var(--accent); }
+    .header-icon { width: 42px; height: 42px; background: rgba(255,255,255,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+    .header-info h1 { font-size: 1rem; font-weight: 700; color: #fff; letter-spacing: 0.01em; }
+    .header-info p  { font-size: 0.72rem; color: rgba(255,255,255,0.65); margin-top: 2px; }
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+    .status-badge { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 5px 12px; border-radius: 999px; font-size: 0.72rem; color: #fff; }
+    .status-dot { width: 7px; height: 7px; background: #4ade80; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .new-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: #fff; padding: 5px 12px; border-radius: 8px; font-size: 0.72rem; font-weight: 600; cursor: pointer; }
+    .new-btn:hover { background: rgba(255,255,255,0.22); }
+
+    /* MESSAGES */
+    .messages { flex: 1; overflow-y: auto; min-height: 0; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: var(--bg); }
+    .messages::-webkit-scrollbar { width: 4px; }
+    .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .msg { display: flex; align-items: flex-start; gap: 10px; animation: slide .22s ease; }
+    @keyframes slide { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+    .msg.user { flex-direction: row-reverse; }
+    .avatar { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; flex-shrink: 0; }
+    .msg.bot  .avatar { background: var(--blue-mid); color: #fff; }
+    .msg.user .avatar { background: var(--blue); color: #fff; }
+    .bubble { max-width: 78%; padding: 10px 14px; border-radius: 14px; font-size: 0.88rem; line-height: 1.55; word-wrap: break-word; }
+    .msg.bot  .bubble { background: var(--bot-bg); border: 1px solid var(--border); border-bottom-left-radius: 3px; color: var(--text); }
+    .msg.user .bubble { background: var(--user-bg); color: #fff; border-bottom-right-radius: 3px; }
+
+    /* TYPING */
+    .typing-bubble { background: var(--bot-bg); border: 1px solid var(--border); border-radius: 14px; border-bottom-left-radius: 3px; padding: 12px 16px; display: flex; gap: 4px; }
+    .dot { width: 7px; height: 7px; background: var(--blue-light); border-radius: 50%; animation: bounce 1.4s infinite; }
+    .dot:nth-child(2){animation-delay:.2s} .dot:nth-child(3){animation-delay:.4s}
+    @keyframes bounce { 0%,60%,100%{transform:translateY(0);opacity:.4} 30%{transform:translateY(-7px);opacity:1} }
+
+    /* CHIPS */
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 10px; background: var(--bg); }
+    .chip { padding: 5px 13px; border-radius: 999px; background: #fff; border: 1px solid var(--border); color: var(--blue-mid); font-size: 0.8rem; cursor: pointer; transition: all .18s; }
+    .chip:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+    /* WELCOME */
+    .welcome { background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 12px; padding: 16px; }
+    .welcome h3 { color: var(--blue); margin-bottom: 8px; font-size: 1rem; }
+    .welcome ul { list-style: none; }
+    .welcome li { padding: 3px 0; font-size: 0.86rem; color: var(--text); }
+    .welcome li::before { content: "▸ "; color: var(--accent); font-weight: 700; }
+
+    /* INPUT */
+    .input-area { padding: 12px 16px; background: var(--bg-dark); border-top: 1px solid var(--border); flex-shrink: 0; }
+    .input-row { display: flex; gap: 10px; align-items: flex-end; }
+    textarea { flex: 1; background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 14px; color: var(--text); font-family: inherit; font-size: 0.9rem; resize: none; outline: none; min-height: 44px; max-height: 120px; line-height: 1.4; }
+    textarea:focus { border-color: var(--blue-mid); }
+    .send-btn { background: var(--blue); color: #fff; border: none; border-radius: 12px; padding: 10px 18px; font-size: 0.9rem; font-weight: 700; cursor: pointer; height: 44px; flex-shrink: 0; transition: background .2s; }
+    .send-btn:hover:not(:disabled) { background: var(--blue-mid); }
+    .send-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .input-hint { font-size: 0.7rem; color: var(--text-muted); text-align: center; margin-top: 6px; }
+  </style>
+</head>
+<body>
+<div class="chat-wrap">
+  <div class="header">
+    <div class="header-icon">🏛️</div>
+    <div class="header-info">
+      <h1>Občina Lepo Mesto</h1>
+      <p>Virtualna asistentka Leja</p>
+    </div>
+    <div class="header-right">
+      <div class="status-badge"><div class="status-dot"></div>Na voljo</div>
+      <button class="new-btn" onclick="newConversation()">Nova</button>
+    </div>
+  </div>
+
+  <div class="messages" id="messages"></div>
+
+  <div class="chips" id="chips">
+    <button class="chip" onclick="sendChip('Uradne ure občine')">🕐 Uradne ure</button>
+    <button class="chip" onclick="sendChip('Kdo je župan?')">👤 Župan</button>
+    <button class="chip" onclick="sendChip('Kako pridobim gradbeno dovoljenje?')">🏗️ Gradnja</button>
+    <button class="chip" onclick="sendChip('Kdaj odvaža smeti?')">♻️ Odvoz smeti</button>
+    <button class="chip" onclick="sendChip('Finančna pomoč ob rojstvu otroka')">👶 Pomoč ob rojstvu</button>
+    <button class="chip" onclick="sendChip('Aktualni razpisi')">📋 Razpisi</button>
+    <button class="chip" onclick="sendChip('Kje se kopa poleti?')">🏊 Kopanje</button>
+    <button class="chip" onclick="sendChip('Kontaktni podatki občine')">📞 Kontakt</button>
+  </div>
+
+  <div class="input-area">
+    <div class="input-row">
+      <textarea id="input" placeholder="Vprašajte o občini..." rows="1"></textarea>
+      <button class="send-btn" id="sendBtn">Pošlji</button>
+    </div>
+    <div class="input-hint">🏛️ Občina Lepo Mesto · obcina@lepo-mesto.si · 02/555 10 00</div>
+  </div>
+</div>
+
+<script>
+  const messagesEl = document.getElementById('messages');
+  const chipsEl    = document.getElementById('chips');
+  const inputEl    = document.getElementById('input');
+  const sendBtn    = document.getElementById('sendBtn');
+  let sessionId    = 'session_' + Math.random().toString(36).substr(2, 9);
+
+  function addMsg(text, role) {
+    chipsEl.style.display = 'none';
+    const div = document.createElement('div');
+    div.className = 'msg ' + role;
+    const av  = document.createElement('div');
+    av.className = 'avatar';
+    av.textContent = role === 'bot' ? 'AI' : 'Vi';
+    const bub = document.createElement('div');
+    bub.className = 'bubble';
+    bub.textContent = text;
+    div.appendChild(av); div.appendChild(bub);
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function showTyping() {
+    const div = document.createElement('div');
+    div.className = 'msg bot'; div.id = 'typing';
+    const av = document.createElement('div');
+    av.className = 'avatar'; av.textContent = 'AI';
+    const bub = document.createElement('div');
+    bub.className = 'typing-bubble';
+    bub.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+    div.appendChild(av); div.appendChild(bub);
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+  function hideTyping() { const el = document.getElementById('typing'); if(el) el.remove(); }
+
+  function showWelcome() {
+    messagesEl.innerHTML = '';
+    const div = document.createElement('div');
+    div.className = 'msg bot';
+    const av = document.createElement('div');
+    av.className = 'avatar'; av.textContent = 'AI';
+    const bub = document.createElement('div');
+    bub.className = 'bubble';
+    bub.innerHTML = `<div class="welcome">
+      <h3>🏛️ Dobrodošli! Sem Leja, asistentka Občine Lepo Mesto.</h3>
+      <p style="font-size:.84rem;color:#5a7090;margin-bottom:10px;">Pomagam vam z informacijami o:</p>
+      <ul>
+        <li>Uradnih urah in kontaktih</li>
+        <li>Vlogah, dovoljenjih in obrazcih</li>
+        <li>Aktualni dogajanju in razpisih</li>
+        <li>Šolah, zdravstvu, komunali</li>
+        <li>Turizmu in prireditvah</li>
+      </ul>
+    </div>`;
+    div.appendChild(av); div.appendChild(bub);
+    messagesEl.appendChild(div);
+    chipsEl.style.display = 'flex';
+  }
+
+  function newConversation() {
+    sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
+    showWelcome();
+  }
+
+  function sendChip(text) {
+    send(text);
+  }
+
+  async function send(text) {
+    text = (text || inputEl.value).trim();
+    if (!text || sendBtn.disabled) return;
+    inputEl.value = '';
+    inputEl.style.height = 'auto';
+    sendBtn.disabled = true;
+    addMsg(text, 'user');
+    showTyping();
+
+    try {
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({message: text, session_id: sessionId})
+      });
+      hideTyping();
+      if (res.ok) {
+        const data = await res.json();
+        addMsg(data.reply || 'Oprostite, brez odgovora.', 'bot');
+      } else {
+        addMsg('Strežnik ni dosegljiv. Poskusite znova.', 'bot');
+      }
+    } catch(e) {
+      hideTyping();
+      addMsg('Napaka pri povezavi.', 'bot');
+    }
+    sendBtn.disabled = false;
+    inputEl.focus();
+  }
+
+  sendBtn.addEventListener('click', () => send(inputEl.value));
+  inputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(inputEl.value); }
+  });
+  inputEl.addEventListener('input', () => {
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+  });
+
+  showWelcome();
+</script>
+</body>
+</html>
