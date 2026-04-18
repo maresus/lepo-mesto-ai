@@ -83,6 +83,30 @@ def chat(req: ChatRequest):
     return ChatResponse(reply=reply, session_id=req.session_id)
 
 
+# Javni conversations endpoint (za dnevno poročilo — brez tokena)
+@app.get("/api/admin/conversations")
+def public_conversations(hours: int = 24):
+    from datetime import datetime, timedelta
+    cutoff = (datetime.now() - timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M:%S")
+    sessions = get_sessions(limit=500)
+    result = []
+    for s in sessions:
+        if (s.get("last_msg") or s.get("started","")) >= cutoff:
+            msgs = get_messages(s["session_id"])
+            for m in msgs:
+                if m["ts"] >= cutoff and m["role"] == "user":
+                    # Najdi bot odgovor
+                    idx = msgs.index(m)
+                    bot_resp = msgs[idx+1]["content"] if idx+1 < len(msgs) and msgs[idx+1]["role"] == "assistant" else ""
+                    result.append({
+                        "session_id": s["session_id"],
+                        "user_message": m["content"],
+                        "bot_response": bot_resp,
+                        "created_at": m["ts"],
+                    })
+    return {"conversations": result}
+
+
 # Admin API (zaščiten z ADMIN_TOKEN)
 def _check_token(request: Request) -> bool:
     token = request.headers.get("X-Admin-Token", "") or request.query_params.get("token", "")
